@@ -82,6 +82,41 @@ fn setup_texts(mut commands: Commands, asset_server: Res<AssetServer>, player: R
     });
 }
 
+fn update(keyboard_input: Res<Input<KeyCode>>, time: Res<Time>, mut player: ResMut<Player>, mut player_move_event: EventWriter<PlayerMoveEvent>) {
+    let mut move_forward = 0.0f32;
+    let mut turn_left = 0.0f32;
+
+    const MOVE_UNIT: f32 = 10.0;
+    const TURN_UNIT: f32 = 1.0;
+
+    if keyboard_input.pressed(KeyCode::W) || keyboard_input.pressed(KeyCode::Up) {
+        move_forward += MOVE_UNIT;
+    }
+
+    if keyboard_input.pressed(KeyCode::S) || keyboard_input.pressed(KeyCode::Down) {
+        move_forward -= MOVE_UNIT;
+    }
+
+    if keyboard_input.pressed(KeyCode::A) || keyboard_input.pressed(KeyCode::Left) {
+        turn_left += MOVE_UNIT;
+    }
+
+    if keyboard_input.pressed(KeyCode::D) || keyboard_input.pressed(KeyCode::Right) {
+        turn_left -= MOVE_UNIT;
+    }
+
+    if move_forward != 0.0 {
+        let translation =  player.transform.forward() * (move_forward * time.delta_seconds());
+        player.transform.translation += translation;
+        player_move_event.send(PlayerMoveEvent)
+    }
+
+    if turn_left != 0.0 {
+        let rotation = Quat::from_rotation_y(turn_left * time.delta_seconds());
+        player.transform.rotate(rotation);
+    }
+}
+
 fn hello_world() {
     println!("hello world!");
 }
