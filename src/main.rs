@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::camera::Camera3d};
 
 struct PlayerMoveEvent;
 
@@ -98,11 +98,11 @@ fn update(keyboard_input: Res<Input<KeyCode>>, time: Res<Time>, mut player: ResM
     }
 
     if keyboard_input.pressed(KeyCode::A) || keyboard_input.pressed(KeyCode::Left) {
-        turn_left += MOVE_UNIT;
+        turn_left += TURN_UNIT;
     }
 
     if keyboard_input.pressed(KeyCode::D) || keyboard_input.pressed(KeyCode::Right) {
-        turn_left -= MOVE_UNIT;
+        turn_left -= TURN_UNIT;
     }
 
     if move_forward != 0.0 {
@@ -117,10 +117,60 @@ fn update(keyboard_input: Res<Input<KeyCode>>, time: Res<Time>, mut player: ResM
     }
 }
 
-fn hello_world() {
-    println!("hello world!");
+fn update_cameras(player: Res<Player>, mut camera_transforms: Query<&mut Transform, With<Camera3d>>) {
+    if !player.is_changed() {
+        return;
+    }
+
+    let mut camera_transform = match camera_transforms.get_single_mut() {
+        Ok(camera_transform) => camera_transform,
+        _ => {
+            error!("Transform not found.");
+            return;
+        }
+    };
+
+    camera_transform.translation = player.transform.translation + Vec3::Y;
+    camera_transform.rotation = player.transform.rotation;
+}
+
+fn update_texts(player: Res<Player>, mut player_move_events: EventReader<PlayerMoveEvent>, mut texts: Query<&mut Text>,) {
+    if player_move_events.iter().count() <= 0 {
+        return;
+    }
+
+    let mut text = match texts.get_single_mut() {
+        Ok(text) => text,
+        _ => {
+            error!("Text not found.");
+            return;
+        }
+    };
+
+    let mut text_section = match text.sections.get_mut(0) {
+        Some(text_section) => text_section,
+        _ => {
+            error!("TextSection not found.");
+            return;
+        }
+    };
+
+    text_section.value = format!("{}", player.into_inner());
 }
 
 fn main() {
-    App::new().add_system(hello_world).run();
+    App::new().insert_resource(WindowDescriptor {
+        title: "bevy".to_string(), ..default()
+    })
+    .add_plugins(DefaultPlugins)
+    .init_resource::<Player>()
+    .add_event::<PlayerMoveEvent>()
+    .add_startup_system(setup_lights)
+    .add_startup_system(setup_cameras)
+    .add_startup_system(setup_objects)
+    .add_startup_system(setup_texts)
+    .add_system(update)
+    .add_system(update_cameras.after(update))
+    .add_system(update_texts.after(update))
+    .run();
 }
